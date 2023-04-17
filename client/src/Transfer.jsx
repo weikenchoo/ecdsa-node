@@ -1,7 +1,9 @@
 import { useState } from "react";
 import server from "./server";
+import wallet from "./LocalWallet";
 
-function Transfer({ address, setBalance }) {
+
+function Transfer({ user, setBalance ,localAccounts, setLocalAccounts}) {
   const [sendAmount, setSendAmount] = useState("");
   const [recipient, setRecipient] = useState("");
 
@@ -10,14 +12,21 @@ function Transfer({ address, setBalance }) {
   async function transfer(evt) {
     evt.preventDefault();
 
+    const message = {
+      amount : parseInt(sendAmount),
+      recipient
+    }
+  
+    const signature = await wallet.signMessage(user,message)
+    const transaction = {
+      message,
+      signature
+    }
+  
     try {
       const {
         data: { balance },
-      } = await server.post(`send`, {
-        sender: address,
-        amount: parseInt(sendAmount),
-        recipient,
-      });
+      } = await server.post(`send`, transaction);
       setBalance(balance);
     } catch (ex) {
       alert(ex.response.data.message);
@@ -39,11 +48,19 @@ function Transfer({ address, setBalance }) {
 
       <label>
         Recipient
-        <input
-          placeholder="Type an address, for example: 0x2"
-          value={recipient}
-          onChange={setValue(setRecipient)}
-        ></input>
+        <select onChange={setValue(setRecipient)} value={recipient}>
+          <option value="">--- please choose a user wallet ---</option>
+          {wallet.addresses.map((u, i) => (
+            <option key={i} value={u.address}>
+              {u.name}
+            </option>
+          ))}
+          {localAccounts.map((u, i) => (
+            <option key={i} value={u.address}>
+              {u.name}
+            </option>
+          ))}
+        </select>
       </label>
 
       <input type="submit" className="button" value="Transfer" />
